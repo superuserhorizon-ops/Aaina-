@@ -257,8 +257,10 @@ fun SlipTab(s: AppState, w: List<List<AppTime>>, onPro: () -> Unit) {
 @Composable
 fun ShareDialog(s: AppState, w: List<List<AppTime>>, onClose: () -> Unit) {
     val ctx = LocalContext.current
-    var hide by remember { mutableStateOf(false) }
-    val bmp = remember(hide) { SlipBuilder.build(ctx, w, s.sel, s.effTheme, s.color, s.limit, s.hidden, hide, false) }
+    // Starts with the apps you hid in the Privacy tab. Changes here apply to this share only.
+    var hid by remember { mutableStateOf(s.hidden) }
+    val names = remember { w[s.sel].map { it.name }.distinct() }
+    val bmp = remember(hid) { SlipBuilder.build(ctx, w, s.sel, s.effTheme, s.color, s.limit, hid, false, false) }
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text("Check before sharing") },
@@ -266,7 +268,13 @@ fun ShareDialog(s: AppState, w: List<List<AppTime>>, onClose: () -> Unit) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 Text("This leaves your phone only because you tapped Share.", fontSize = 13.sp)
                 Image(bmp.asImageBitmap(), "Slip preview", Modifier.fillMaxWidth().padding(vertical = 8.dp), contentScale = ContentScale.FillWidth)
-                Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(hide, { hide = it }); Text("Hide app names") }
+                Text("Hide from this slip (this share only)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                names.forEach { n ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(n in hid, { on -> hid = if (on) hid + n else hid - n })
+                        Text(n)
+                    }
+                }
             }
         },
         confirmButton = { Button({ shareSlip(ctx, bmp); onClose() }) { Text("Send on WhatsApp") } },
